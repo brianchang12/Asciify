@@ -37,36 +37,12 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         title: Text('Welcome To Asciify'),
       ),
-      body: OrientationBuilder(
-        builder: (context, orientation) {
-          if (orientation == Orientation.portrait) {
-            return HomePortrait();
-          } else {
-            return HomeLandscape();
-          }
-        },
-      ),
-    );
+      body: HomePortrait(),
+      );
   }
 }
 
 
-
-class HomeLandscape extends StatelessWidget{
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 200.0,
-          height: 250.0,
-          child: Card(
-          ),
-        )
-      ],
-    );
-  }
-}
 
 class HomePortrait extends StatelessWidget {
 
@@ -83,6 +59,7 @@ class HomePortrait extends StatelessWidget {
             width: 400.0,
             height: 435.0,
             child: Card(
+              color:  Color(0xFF5B84C4),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(25.0)
               ),

@@ -23,6 +23,7 @@ environment:
 dependencies:
   image_picker: ^0.7.3
   image_cropper: ^1.4.0
+  image_gallery_saver: '^1.6.8'
   flutter:
     sdk: flutter
 

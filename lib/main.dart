@@ -7,7 +7,6 @@ void main() {
   runApp(MaterialApp(
       initialRoute: '/',
       theme: ThemeData(
-        cardColor: Color(0xFF5B84C4),
         fontFamily: 'Righteous',
         bottomAppBarTheme: BottomAppBarTheme(
           color: Color(0xFF939BB1),
