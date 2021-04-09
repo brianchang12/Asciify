@@ -21,7 +21,9 @@ environment:
   sdk: ">=2.7.0 <3.0.0"
 
 dependencies:
+  image_pixels: ^2.0.0
   dio: ^4.0.0
+  image: ^3.0.2
   image_picker: ^0.7.3
   image_cropper: ^1.4.0
   image_gallery_saver: '^1.6.8'

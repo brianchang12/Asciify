@@ -1,18 +1,21 @@
 
+import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:asciify/screens/custom_exception.dart';
 import 'package:asciify/screens/home_page.dart';
 import 'package:dio/dio.dart';
+
 import 'package:flushbar/flushbar.dart';
 import 'package:flutter/material.dart';
+import 'package:image/image.dart' as img;
 
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'dart:io' as io;
+
+
 
 class CameraPage extends StatefulWidget {
   @override
@@ -22,6 +25,7 @@ class CameraPage extends StatefulWidget {
 class _CameraPageState extends State<CameraPage> {
   File _imageFile;
   final picker = ImagePicker();
+  Image image;
 
 
 
@@ -33,12 +37,10 @@ class _CameraPageState extends State<CameraPage> {
         String directoryPath = directory.path;
         String filePath = '$directoryPath/$fileName.jpg';
         if (await File(filePath).exists()) {
-          throw SameNameFileException('File with Same Name Found');
+          throw SameNameFileException('File with Same Name Found, Please Rename');
         }
         File saveFile = File(filePath);
-        await saveFile.writeAsBytes(await _imageFile.readAsBytes());
-        final saved = SnackBar(content: Text('Saved'));
-        ScaffoldMessenger.of(context).showSnackBar(saved);
+        saveFile.writeAsBytesSync(_imageFile.readAsBytesSync());
         print(_imageFile.path);
         print(saveFile.path);
       } else {
@@ -59,6 +61,8 @@ class _CameraPageState extends State<CameraPage> {
       }
     });
   }
+
+
 
   Future<void> _crop(ImageSource source) async {
     final selected = await picker.getImage(source: source);
@@ -99,16 +103,11 @@ class _CameraPageState extends State<CameraPage> {
         alignment: Alignment.topCenter,
         child: Column(
           children: [
-            SizedBox(
-              height: 50.0,
-            ),
             Container(
-              width: 300.0,
-              height: 400.0,
+              margin: EdgeInsets.fromLTRB(0, 30.0, 0, 30.0),
+              width: MediaQuery.of(context).size.width * 0.60,
+              height: MediaQuery.of(context).size.height * 0.60,
                 child: _imageFile == null ? Card(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25.0)
-                  ),
                   child: Align(
                     alignment: Alignment.center,
                     child: Text('No Image Selected'),
@@ -118,9 +117,6 @@ class _CameraPageState extends State<CameraPage> {
                   child: Image.file(_imageFile),
                   fit: BoxFit.fill,
                 )
-            ),
-            SizedBox(
-              height: 30.0
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -170,6 +166,9 @@ class _CameraPageState extends State<CameraPage> {
                                 ElevatedButton(onPressed: () async {
                                   try {
                                     await _saveImage(textController.text);
+                                    Navigator.of(context).pop();
+                                    SnackBar saveMessage = SnackBar(content: Text('Image Saved'));
+                                    ScaffoldMessenger.of(context).showSnackBar(saveMessage);
                                   } catch(e) {
                                     print('goodbye');
                                     if (e is SameNameFileException ||
@@ -196,6 +195,81 @@ class _CameraPageState extends State<CameraPage> {
                   ),
                 )
               ],
+            ),
+            SizedBox(
+              height: 40.0,
+            ),
+            SizedBox(
+              width: 150.0,
+              child: ElevatedButton(
+                onPressed: () async {
+                  if (_imageFile == null) {
+                    print('Error');
+                  } else {
+                    img.Image test = img.decodeImage(_imageFile.readAsBytesSync());
+                    int width = test.width;
+                    int height = test.height;
+                    double scaleFactor = 0.075;
+                    test = img.copyResize(test, height:(scaleFactor * height * (1.3)).toInt(), width: (scaleFactor * width).toInt(),
+                    interpolation: img.Interpolation.nearest);
+                    test = img.adjustColor(test, contrast: 10.0);
+                    String chars = " .:-=+*#%@";
+
+                    List<String> charList = chars.split("");
+                    int charLength = charList.length;
+                    //charList = List.from(charList.reversed);
+                    double interval = charLength / 256;
+                    print(test.width);
+                    print(test.height);
+                    print(test.length);
+                    Directory directory = await getApplicationDocumentsDirectory();
+                    String path = directory.path;
+                    print(path);
+                    // var temp = await File('$path/test.png').writeAsBytes(img.encodePng(test));
+                    // setState(() {
+                    //   _imageFile = temp;
+                    // });
+                    File output = File('$path/output.txt');
+                    output.writeAsStringSync('');
+                    print(test.getBytes());
+
+                    for (int y = 0; y < test.height; y++) {
+                      for (int x = 0; x < test.width; x++) {
+                        int testPixel = test.getPixel(x, y);
+                        int blue = ((testPixel & 0x00FF0000) >> 16);
+                        int green = ((testPixel & 0x0000FF00) >> 8);
+                        int red = testPixel & 0x000000FF;
+                        int grayValue = ((red/3) + (green/3) + (blue/3)).round();
+                        output.writeAsStringSync(charList[(grayValue * interval).floor()], mode: FileMode.append);
+                      }
+                      output.writeAsStringSync('\n', mode: FileMode.append);
+                    }
+                    print('finished');
+                    int testPixel = test.getPixel(0, 0);
+                    int blue = ((testPixel & 0x00FF0000) >> 16);
+                    int green = ((testPixel & 0x0000FF00) >> 8);
+                    int red = testPixel & 0x000000FF;
+                    print(red);
+                    print(green);
+                    print(blue);
+                    // double d = (red/3) + (green/3) + (blue/3);
+                    // print(d.round());
+                    // print(testPixel);
+                    // var test2 = img.copyResize(test, width: 200);
+                    // print(test.width);
+                    // print(test.length);
+                    // print(test2.width);
+                    // print(test2.length);
+
+                    // for (int i = 0; i < test.length; i++) {
+                    //   for (int j = 0; j < test.width; j++) {
+                    //     print(test.getPixelSafe(i, j));
+                    //   }
+                    //}
+                  }
+                },
+                child: Icon(Icons.alternate_email),
+              ),
             )
           ],
         )
