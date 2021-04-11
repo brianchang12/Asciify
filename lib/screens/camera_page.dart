@@ -1,7 +1,8 @@
-
+import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui';
 import 'package:asciify/screens/custom_exception.dart';
 import 'package:asciify/screens/home_page.dart';
 import 'package:dio/dio.dart';
@@ -30,19 +31,17 @@ class _CameraPageState extends State<CameraPage> {
 
 
 
-  Future<void> _saveImage(String fileName) async {
-    if (_imageFile != null) {
+  Future<void> _saveImage({String fileName, String format, File fileToSave}) async {
+    if (fileToSave != null) {
       if (Platform.isAndroid) {
         Directory directory = await getExternalStorageDirectory();
         String directoryPath = directory.path;
-        String filePath = '$directoryPath/$fileName.jpg';
+        String filePath = '$directoryPath/$fileName$format';
         if (await File(filePath).exists()) {
           throw SameNameFileException('File with Same Name Found, Please Rename');
         }
         File saveFile = File(filePath);
-        saveFile.writeAsBytesSync(_imageFile.readAsBytesSync());
-        print(_imageFile.path);
-        print(saveFile.path);
+        await saveFile.writeAsBytes(await fileToSave.readAsBytes());
       } else {
         throw PlatformException('Platform is not Supported');
       }
@@ -60,6 +59,98 @@ class _CameraPageState extends State<CameraPage> {
         _imageFile = File(selected.path);
       }
     });
+  }
+
+  StatefulBuilder _saveDialogue({TextEditingController textController,
+  String exceptionText = '', File fileToSave, String format}) {
+    return StatefulBuilder(
+        builder: (BuildContext context, StateSetter setState) {
+          return AlertDialog(
+            title: Text('Please Add a Name to your File'),
+            content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(exceptionText,
+                    style: TextStyle(
+                        color: Colors.red
+                    ),
+                  ),
+                  TextField(
+                    controller: textController,
+                    decoration: InputDecoration(
+                        hintText: 'Name'
+                    ),
+                  ),
+                ]
+            ),
+            actions: [
+              ElevatedButton(onPressed: () {
+                Navigator.of(context).pop();
+              },
+                  child: Icon(Icons.cancel)),
+              ElevatedButton(onPressed: () async {
+                try {
+                  await _saveImage(fileName: textController.text, format: format,
+                  fileToSave: fileToSave);
+                  Navigator.of(context).pop();
+                  SnackBar saveMessage = SnackBar(content: Text('Image Saved'));
+                  ScaffoldMessenger.of(context).showSnackBar(saveMessage);
+                } catch(e) {
+                  if (e is SameNameFileException ||
+                      e is NoImageException || e is PlatformException) {
+                    setState(() {
+                      exceptionText = e.cause;
+                    });
+                  } else {
+                    print(e.toString());
+                  }
+
+                }
+              },
+                  child: Icon(Icons.check))
+            ],
+          );
+        }
+    );
+  }
+
+  Future<File> _convertImage() async {
+    if (_imageFile == null) {
+      throw NoImageException('No Image to Convert');
+    } else {
+      img.Image test = img.decodeImage(await _imageFile.readAsBytes());
+      int width = test.width;
+    int height = test.height;
+    double scaleFactor = 0.075;
+    test = img.copyResize(test, height:(scaleFactor * height * (1.30)).toInt(), width: (scaleFactor * width).toInt(),
+    interpolation: img.Interpolation.nearest);
+    test = img.grayscale(test);
+    test = img.adjustColor(test, contrast: 20.0);
+    String chars = " .:-=+*#%@";
+    List<String> charList = chars.split("");
+    charList = charList.reversed.toList();
+    int charLength = charList.length;
+    double interval = charLength / 256;
+    print(test.width);
+    print(test.height);
+    print(test.length);
+    Directory directory = await getApplicationDocumentsDirectory();
+    String path = directory.path;
+    File output = File('$path/output.txt');
+    output.writeAsStringSync('');
+    for (int y = 0; y < test.height; y++) {
+      for (int x = 0; x < test.width; x++) {
+        int testPixel = test.getPixel(x, y);
+        int blue = ((testPixel & 0x00FF0000) >> 16);
+        int green = ((testPixel & 0x0000FF00) >> 8);
+        int red = testPixel & 0x000000FF;
+        int grayValue = ((red/3) + (green/3) + (blue/3)).round();
+        await output.writeAsString(charList[(grayValue * interval).floor()], mode: FileMode.append);
+     }
+      await output.writeAsString('\n', mode: FileMode.append);
+    }
+    return output;
+    }
   }
 
 
@@ -137,58 +228,8 @@ class _CameraPageState extends State<CameraPage> {
                       showDialog(context: context,
                           builder: (BuildContext context) {
                             TextEditingController textController = TextEditingController();
-                            String exceptionText = '';
-                        return StatefulBuilder(
-                          builder: (BuildContext context, StateSetter setState) {
-                            return AlertDialog(
-                              title: Text('Please Add a Name to your File'),
-                              content: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(exceptionText,
-                                      style: TextStyle(
-                                          color: Colors.red
-                                      ),
-                                    ),
-                                    TextField(
-                                      controller: textController,
-                                      decoration: InputDecoration(
-                                          hintText: 'Name'
-                                      ),
-                                    ),
-                                  ]
-                              ),
-                              actions: [
-                                ElevatedButton(onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                                    child: Icon(Icons.cancel)),
-                                ElevatedButton(onPressed: () async {
-                                  try {
-                                    await _saveImage(textController.text);
-                                    Navigator.of(context).pop();
-                                    SnackBar saveMessage = SnackBar(content: Text('Image Saved'));
-                                    ScaffoldMessenger.of(context).showSnackBar(saveMessage);
-                                  } catch(e) {
-                                    print('goodbye');
-                                    if (e is SameNameFileException ||
-                                        e is NoImageException || e is PlatformException) {
-                                      print('hello');
-                                      setState(() {
-                                        print(e.cause);
-                                        exceptionText = e.cause;
-                                      });
-                                    } else {
-                                      print(e.toString());
-                                    }
-
-                                  }
-                                },
-                                    child: Icon(Icons.check))
-                              ],
-                            );
-                          }
-                        );
+                            return _saveDialogue(textController: textController,
+                            fileToSave: _imageFile, format: '.png');
                       });
                     },
                     child: Icon(Icons.save_alt),
@@ -203,69 +244,17 @@ class _CameraPageState extends State<CameraPage> {
               width: 150.0,
               child: ElevatedButton(
                 onPressed: () async {
-                  if (_imageFile == null) {
-                    print('Error');
-                  } else {
-                    img.Image test = img.decodeImage(_imageFile.readAsBytesSync());
-                    int width = test.width;
-                    int height = test.height;
-                    double scaleFactor = 0.075;
-                    test = img.copyResize(test, height:(scaleFactor * height * (1.3)).toInt(), width: (scaleFactor * width).toInt(),
-                    interpolation: img.Interpolation.nearest);
-                    test = img.adjustColor(test, contrast: 10.0);
-                    String chars = " .:-=+*#%@";
+                  File converted;
+                  bool conversionFailed = false;
+                  try {
+                  converted = await _convertImage();
+                  } on NoImageException catch(e) {
+                    SnackBar message = SnackBar(content: Text(e.cause));
+                    ScaffoldMessenger.of(context).showSnackBar(message);
+                    conversionFailed = true;
+                  }
+                  if (!conversionFailed) {
 
-                    List<String> charList = chars.split("");
-                    int charLength = charList.length;
-                    //charList = List.from(charList.reversed);
-                    double interval = charLength / 256;
-                    print(test.width);
-                    print(test.height);
-                    print(test.length);
-                    Directory directory = await getApplicationDocumentsDirectory();
-                    String path = directory.path;
-                    print(path);
-                    // var temp = await File('$path/test.png').writeAsBytes(img.encodePng(test));
-                    // setState(() {
-                    //   _imageFile = temp;
-                    // });
-                    File output = File('$path/output.txt');
-                    output.writeAsStringSync('');
-                    print(test.getBytes());
-
-                    for (int y = 0; y < test.height; y++) {
-                      for (int x = 0; x < test.width; x++) {
-                        int testPixel = test.getPixel(x, y);
-                        int blue = ((testPixel & 0x00FF0000) >> 16);
-                        int green = ((testPixel & 0x0000FF00) >> 8);
-                        int red = testPixel & 0x000000FF;
-                        int grayValue = ((red/3) + (green/3) + (blue/3)).round();
-                        output.writeAsStringSync(charList[(grayValue * interval).floor()], mode: FileMode.append);
-                      }
-                      output.writeAsStringSync('\n', mode: FileMode.append);
-                    }
-                    print('finished');
-                    int testPixel = test.getPixel(0, 0);
-                    int blue = ((testPixel & 0x00FF0000) >> 16);
-                    int green = ((testPixel & 0x0000FF00) >> 8);
-                    int red = testPixel & 0x000000FF;
-                    print(red);
-                    print(green);
-                    print(blue);
-                    // double d = (red/3) + (green/3) + (blue/3);
-                    // print(d.round());
-                    // print(testPixel);
-                    // var test2 = img.copyResize(test, width: 200);
-                    // print(test.width);
-                    // print(test.length);
-                    // print(test2.width);
-                    // print(test2.length);
-
-                    // for (int i = 0; i < test.length; i++) {
-                    //   for (int j = 0; j < test.width; j++) {
-                    //     print(test.getPixelSafe(i, j));
-                    //   }
-                    //}
                   }
                 },
                 child: Icon(Icons.alternate_email),
