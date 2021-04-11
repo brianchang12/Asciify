@@ -85,7 +85,7 @@ class _CameraPageState extends State<CameraPage> {
             ),
             actions: [
               ElevatedButton(onPressed: () {
-                textController.dispose();
+                textController.clear();
                 Navigator.of(context).pop();
               },
                   child: Icon(Icons.cancel)),
@@ -107,7 +107,7 @@ class _CameraPageState extends State<CameraPage> {
                   }
 
                 } finally {
-                  textController.dispose();
+                  textController.clear();
                 }
               },
                   child: Icon(Icons.check))
@@ -123,36 +123,36 @@ class _CameraPageState extends State<CameraPage> {
     } else {
       img.Image test = img.decodeImage(await _imageFile.readAsBytes());
       int width = test.width;
-    int height = test.height;
-    double scaleFactor = 0.075;
-    test = img.copyResize(test, height:(scaleFactor * height * (1.30)).toInt(), width: (scaleFactor * width).toInt(),
-    interpolation: img.Interpolation.nearest);
-    test = img.grayscale(test);
-    test = img.adjustColor(test, contrast: 20.0);
-    String chars = " .:-=+*#%@";
-    List<String> charList = chars.split("");
-    charList = charList.reversed.toList();
-    int charLength = charList.length;
-    double interval = charLength / 256;
-    print(test.width);
-    print(test.height);
-    print(test.length);
-    Directory directory = await getApplicationDocumentsDirectory();
-    String path = directory.path;
-    File output = File('$path/output.txt');
-    output.writeAsStringSync('');
-    for (int y = 0; y < test.height; y++) {
-      for (int x = 0; x < test.width; x++) {
-        int testPixel = test.getPixel(x, y);
-        int blue = ((testPixel & 0x00FF0000) >> 16);
-        int green = ((testPixel & 0x0000FF00) >> 8);
-        int red = testPixel & 0x000000FF;
-        int grayValue = ((red/3) + (green/3) + (blue/3)).round();
-        await output.writeAsString(charList[(grayValue * interval).floor()], mode: FileMode.append);
-     }
-      await output.writeAsString('\n', mode: FileMode.append);
-    }
-    return output;
+      int height = test.height;
+      double scaleFactor = 0.075;
+      test = img.copyResize(
+          test, height: (scaleFactor * height * (1.30)).toInt(),
+          width: (scaleFactor * width).toInt(),
+          interpolation: img.Interpolation.nearest);
+      test = img.grayscale(test);
+      test = img.adjustColor(test, contrast: 20.0);
+      String chars = " .:-=+*#%@";
+      List<String> charList = chars.split("");
+      charList = charList.reversed.toList();
+      int charLength = charList.length;
+      double interval = charLength / 256;
+      Directory directory = await getApplicationDocumentsDirectory();
+      String path = directory.path;
+      File output = File('$path/output.txt');
+      output.writeAsStringSync('');
+      for (int y = 0; y < test.height; y++) {
+        for (int x = 0; x < test.width; x++) {
+          int testPixel = test.getPixel(x, y);
+          int blue = ((testPixel & 0x00FF0000) >> 16);
+          int green = ((testPixel & 0x0000FF00) >> 8);
+          int red = testPixel & 0x000000FF;
+          int grayValue = ((red / 3) + (green / 3) + (blue / 3)).round();
+          await output.writeAsString(
+              charList[(grayValue * interval).floor()], mode: FileMode.append);
+        }
+        await output.writeAsString('\n', mode: FileMode.append);
+      }
+      return output;
     }
   }
 
@@ -229,6 +229,7 @@ class _CameraPageState extends State<CameraPage> {
                   child: ElevatedButton(
                     onPressed: () {
                       showDialog(context: context,
+                          barrierDismissible: false,
                           builder: (BuildContext context) {
                             return _saveDialogue(fileToSave: _imageFile, format: '.png');
                       });
@@ -245,17 +246,35 @@ class _CameraPageState extends State<CameraPage> {
               width: 150.0,
               child: ElevatedButton(
                 onPressed: () async {
+                  SnackBar message;
                   File converted;
                   bool conversionFailed = false;
+                  BuildContext dialogContext;
+                  showDialog(context: context, barrierDismissible: false,
+                      builder: (BuildContext context) {
+                        dialogContext = context;
+                        return Dialog(
+                          child: new Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              CircularProgressIndicator(),
+                              Text('Converting')
+                            ],
+                          ),
+                        );
+                      });
                   try {
-                  converted = await _convertImage();
+                    converted = await _convertImage();
+                    Navigator.pop(dialogContext);
                   } on NoImageException catch(e) {
-                    SnackBar message = SnackBar(content: Text(e.cause));
+                    Navigator.pop(dialogContext);
+                    message = SnackBar(content: Text(e.cause));
                     ScaffoldMessenger.of(context).showSnackBar(message);
                     conversionFailed = true;
                   }
                   if (!conversionFailed) {
                     showDialog(context: context,
+                        barrierDismissible: false,
                         builder: (BuildContext context) {
                           return _saveDialogue(fileToSave: converted, format: '.txt');
                     });

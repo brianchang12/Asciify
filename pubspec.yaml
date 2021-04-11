@@ -21,6 +21,7 @@ environment:
   sdk: ">=2.7.0 <3.0.0"
 
 dependencies:
+  simpleprogressdialog: ^1.0.8
   image_pixels: ^2.0.0
   dio: ^4.0.0
   image: ^3.0.2
