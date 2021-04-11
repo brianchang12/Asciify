@@ -27,6 +27,7 @@ class _CameraPageState extends State<CameraPage> {
   File _imageFile;
   final picker = ImagePicker();
   Image image;
+  TextEditingController textController = TextEditingController();
 
 
 
@@ -61,8 +62,7 @@ class _CameraPageState extends State<CameraPage> {
     });
   }
 
-  StatefulBuilder _saveDialogue({TextEditingController textController,
-  String exceptionText = '', File fileToSave, String format}) {
+  StatefulBuilder _saveDialogue({String exceptionText = '', File fileToSave, String format}) {
     return StatefulBuilder(
         builder: (BuildContext context, StateSetter setState) {
           return AlertDialog(
@@ -85,6 +85,7 @@ class _CameraPageState extends State<CameraPage> {
             ),
             actions: [
               ElevatedButton(onPressed: () {
+                textController.dispose();
                 Navigator.of(context).pop();
               },
                   child: Icon(Icons.cancel)),
@@ -105,6 +106,8 @@ class _CameraPageState extends State<CameraPage> {
                     print(e.toString());
                   }
 
+                } finally {
+                  textController.dispose();
                 }
               },
                   child: Icon(Icons.check))
@@ -227,9 +230,7 @@ class _CameraPageState extends State<CameraPage> {
                     onPressed: () {
                       showDialog(context: context,
                           builder: (BuildContext context) {
-                            TextEditingController textController = TextEditingController();
-                            return _saveDialogue(textController: textController,
-                            fileToSave: _imageFile, format: '.png');
+                            return _saveDialogue(fileToSave: _imageFile, format: '.png');
                       });
                     },
                     child: Icon(Icons.save_alt),
@@ -254,7 +255,10 @@ class _CameraPageState extends State<CameraPage> {
                     conversionFailed = true;
                   }
                   if (!conversionFailed) {
-
+                    showDialog(context: context,
+                        builder: (BuildContext context) {
+                          return _saveDialogue(fileToSave: converted, format: '.txt');
+                    });
                   }
                 },
                 child: Icon(Icons.alternate_email),
