@@ -8,14 +8,93 @@ final String caption = 'Turn your regular photos into Ascii photos';
 
 
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatelessWidget{
+
+  Widget _homePortrait(BuildContext homeContext) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisAlignment: MainAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: MediaQuery.of(homeContext).size.width * 0.80,
+          height: MediaQuery.of(homeContext).size.height * 0.70,
+          child: Card(
+            color:  Color(0xFF5B84C4),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25.0)
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: <Widget>[
+                Container(
+                    child: Image(
+                      image: image,
+                      width: MediaQuery.of(homeContext).size.width * 0.55,
+                      height: MediaQuery.of(homeContext).size.height * 0.45,
+                    )
+                ),
+                Container(
+                  child: Text(title,
+                    style: Theme.of(homeContext).textTheme.headline1,
+                  ),
+                ),
+                Container(
+                  child: Text(caption,
+                    style: Theme.of(homeContext).textTheme.headline2,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _homeWidget() {
+    return Builder(
+      builder: (BuildContext context) {
+        return Center(
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.80,
+            height: MediaQuery.of(context).size.height * 0.55,
+            child: Card(
+              color: Color(0xFF5B84C4),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25.0)),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Image(
+                      image: image,
+                      width: MediaQuery.of(context).size.width * 0.40,
+                      height: MediaQuery.of(context).size.height * 0.30,
+                    ),
+                    Text(title,
+                      style: Theme.of(context).textTheme.headline1,
+                    ),
+                    Expanded(
+                      child: Text(caption,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.headline2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
     return Scaffold(
       bottomNavigationBar: BottomAppBar(
         child: Row(
@@ -37,62 +116,19 @@ class HomePage extends StatelessWidget {
       appBar: AppBar(
         title: Text('Welcome To Asciify'),
       ),
-      body: HomePortrait(),
+      body: _homeWidget(),
       );
   }
+  // @override
+  // void initState(){
+  //   super.initState();
+  //   SystemChrome.setPreferredOrientations([
+  //     DeviceOrientation.portraitUp,
+  //     DeviceOrientation.portraitDown,
+  //   ]);
+  // }
+
+
 }
 
 
-
-class HomePortrait extends StatelessWidget {
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.topCenter,
-      child: Column(
-        children: [
-          SizedBox(
-            height: 40.0,
-          ),
-          Container(
-            width: 400.0,
-            height: 435.0,
-            child: Card(
-              color:  Color(0xFF5B84C4),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25.0)
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Container(
-                      child: Image(
-                        image: image,
-                        width: 250.0,
-                        height: 250.0,
-                      )
-                  ),
-                  Container(
-                    child: Text(title,
-                      style: Theme.of(context).textTheme.headline1,
-                      ),
-                    ),
-                  Container(
-                    child: Text(caption,
-                    style: Theme.of(context).textTheme.headline2,
-                    ),
-                  ),
-                  SizedBox(
-                    height: 20.0,
-                  )
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

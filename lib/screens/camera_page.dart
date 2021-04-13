@@ -27,10 +27,21 @@ class _CameraPageState extends State<CameraPage> {
   File _imageFile;
   final picker = ImagePicker();
   Image image;
-  TextEditingController textController = TextEditingController();
+  TextEditingController textController;
 
 
+  @override
+  void initState() {
+    super.initState();
+    textController = TextEditingController();
+  }
 
+
+  @override
+  void dispose() {
+    textController.dispose();
+    super.dispose();
+  }
 
   Future<void> _saveImage({String fileName, String format, File fileToSave}) async {
     if (fileToSave != null) {
@@ -65,53 +76,58 @@ class _CameraPageState extends State<CameraPage> {
   StatefulBuilder _saveDialogue({String exceptionText = '', File fileToSave, String format}) {
     return StatefulBuilder(
         builder: (BuildContext context, StateSetter setState) {
-          return AlertDialog(
-            title: Text('Please Add a Name to your File'),
-            content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(exceptionText,
-                    style: TextStyle(
-                        color: Colors.red
+          print(context);
+          print("saving...");
+          return SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: AlertDialog(
+              title: Text('Please Add a Name to your File'),
+              content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(exceptionText,
+                      style: TextStyle(
+                          color: Colors.red
+                      ),
                     ),
-                  ),
-                  TextField(
-                    controller: textController,
-                    decoration: InputDecoration(
-                        hintText: 'Name'
+                    TextField(
+                      controller: textController,
+                      decoration: InputDecoration(
+                          hintText: 'Name'
+                      ),
                     ),
-                  ),
-                ]
-            ),
-            actions: [
-              ElevatedButton(onPressed: () {
-                textController.clear();
-                Navigator.of(context).pop();
-              },
-                  child: Icon(Icons.cancel)),
-              ElevatedButton(onPressed: () async {
-                try {
-                  await _saveImage(fileName: textController.text, format: format,
-                  fileToSave: fileToSave);
-                  Navigator.of(context).pop();
-                  SnackBar saveMessage = SnackBar(content: Text('Image Saved'));
-                  ScaffoldMessenger.of(context).showSnackBar(saveMessage);
-                } catch(e) {
-                  if (e is SameNameFileException ||
-                      e is NoImageException || e is PlatformException) {
-                    setState(() {
-                      exceptionText = e.cause;
-                    });
-                  } else {
-                    print(e.toString());
-                  }
-
-                } finally {
+                  ]
+              ),
+              actions: [
+                ElevatedButton(onPressed: () {
                   textController.clear();
-                }
-              },
-                  child: Icon(Icons.check))
-            ],
+                  Navigator.of(context).pop();
+                },
+                    child: Icon(Icons.cancel)),
+                ElevatedButton(onPressed: () async {
+                  try {
+                    await _saveImage(fileName: textController.text, format: format,
+                    fileToSave: fileToSave);
+                    Navigator.of(context).pop();
+                    SnackBar saveMessage = SnackBar(content: Text('Image Saved'));
+                    ScaffoldMessenger.of(context).showSnackBar(saveMessage);
+                  } catch(e) {
+                    if (e is SameNameFileException ||
+                        e is NoImageException || e is PlatformException) {
+                      setState(() {
+                        exceptionText = e.cause;
+                      });
+                    } else {
+                      print(e.toString());
+                    }
+
+                  } finally {
+                    textController.clear();
+                  }
+                },
+                    child: Icon(Icons.check))
+              ],
+            ),
           );
         }
     );
@@ -121,15 +137,17 @@ class _CameraPageState extends State<CameraPage> {
     if (_imageFile == null) {
       throw NoImageException('No Image to Convert');
     } else {
+      print(_imageFile.path);
       img.Image test = img.decodeImage(await _imageFile.readAsBytes());
       int width = test.width;
       int height = test.height;
       double scaleFactor = 0.075;
       test = img.copyResize(
-          test, height: (scaleFactor * height * (1.30)).toInt(),
-          width: (scaleFactor * width).toInt(),
+          test, height: (scaleFactor * height).toInt(),
+          width: (scaleFactor * width * 1.12).toInt(),
           interpolation: img.Interpolation.nearest);
-      test = img.grayscale(test);
+      print(test.width);
+      print(test.height);
       test = img.adjustColor(test, contrast: 20.0);
       String chars = " .:-=+*#%@";
       List<String> charList = chars.split("");
@@ -185,106 +203,183 @@ class _CameraPageState extends State<CameraPage> {
       });
     }
   }
-  // _imageFile == null ? Text('No Image Selected') : Image.file(_imageFile),
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(
-        title: Text('Take Pictures'),
+
+  Widget _cropButton() {
+    return SizedBox(
+      width: 110.0,
+      child: ElevatedButton(
+          onPressed: () {
+            _crop(ImageSource.gallery);
+          },
+          child: Icon(Icons.crop)
       ),
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: Column(
-          children: [
-            Container(
-              margin: EdgeInsets.fromLTRB(0, 30.0, 0, 30.0),
+    );
+  }
+
+  Widget _saveButton() {
+    return SizedBox(
+      width: 110.0,
+      child: ElevatedButton(
+        onPressed: () {
+          print(context);
+          showDialog(context: context,
+              barrierDismissible: false,
+              builder: (BuildContext context) {
+                return _saveDialogue(fileToSave: _imageFile, format: '.png');
+              });
+        },
+        child: Icon(Icons.save_alt),
+      ),
+    );
+  }
+
+  Widget _imageDisplay() {
+    return _imageFile == null ? Card(
+      child: Align(
+        alignment: Alignment.center,
+        child: Text('No Image Selected'),
+      ),
+      color:   Color(0xFF939BB1),
+    ) : FittedBox(
+      child: Image.file(_imageFile),
+      fit: BoxFit.fill,
+    );
+  }
+
+
+  // _imageFile == null ? Text('No Image Selected') : Image.file(_imageFile),
+  Widget _landscapeOrientation() {
+    return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          Container(
+              margin: EdgeInsets.fromLTRB(0, 15.0, 0, 15.0),
               width: MediaQuery.of(context).size.width * 0.60,
               height: MediaQuery.of(context).size.height * 0.60,
-                child: _imageFile == null ? Card(
-                  child: Align(
-                    alignment: Alignment.center,
-                    child: Text('No Image Selected'),
+              child: _imageDisplay()
+          ),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            mainAxisSize: MainAxisSize.max,
+            children: [
+              _cropButton(),
+              _saveButton(),
+              _convertButton(),
+            ],
+          ),
+          SizedBox(
+            width: 35.0,
+          )
+        ],
+      );
+  }
+
+  Widget _convertButton() {
+    return SizedBox(
+      width: 110.0,
+      child: ElevatedButton(
+        onPressed: () async {
+          SnackBar message;
+          File converted;
+          bool conversionFailed = false;
+          BuildContext dialogContext;
+          showDialog(context: context, barrierDismissible: false,
+              builder: (BuildContext context) {
+                context.findAncestorRenderObjectOfType();
+                dialogContext = context;
+                return Dialog(
+                  child: new Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        child: CircularProgressIndicator(),
+                        margin: EdgeInsets.all(15.0),
+                      ),
+                      Container(
+                        child: Text('Converting'),
+                        margin: EdgeInsets.all(15.0),
+                      )
+                    ],
                   ),
-                  color:   Color(0xFF939BB1),
-                ) : FittedBox(
-                  child: Image.file(_imageFile),
-                  fit: BoxFit.fill,
-                )
+                );
+              });
+          try {
+            converted = await _convertImage();
+            Navigator.pop(dialogContext);
+          } on NoImageException catch(e) {
+            await Future.delayed(Duration(seconds: 1));
+            Navigator.pop(dialogContext);
+            message = SnackBar(content: Text(e.cause));
+            ScaffoldMessenger.of(context).showSnackBar(message);
+            conversionFailed = true;
+          }
+          if (!conversionFailed) {
+            showDialog(context: context,
+                barrierDismissible: false,
+                builder: (BuildContext context) {
+                  return _saveDialogue(fileToSave: converted, format: '.txt');
+                });
+          }
+        },
+        child: Icon(Icons.alternate_email),
+      ),
+    );
+  }
+
+  Widget _portraitOrientation() {
+    print(context);
+    print('portait');
+    return Column(
+          mainAxisAlignment: MainAxisAlignment.start,
+          mainAxisSize: MainAxisSize.max,
+          children: [
+            Container(
+                margin: EdgeInsets.fromLTRB(0, 15.0, 0, 25.0),
+                width: MediaQuery.of(context).size.width * 0.60,
+                height: MediaQuery.of(context).size.height * 0.60,
+                child: _imageDisplay()
             ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                SizedBox(
-                  width: 70.0,
-                  child: ElevatedButton(
-                      onPressed: () {
-                        _crop(ImageSource.gallery);
-                      },
-                      child: Icon(Icons.crop)
-                  ),
-                ),
-                SizedBox(
-                  width: 70.0,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      showDialog(context: context,
-                          barrierDismissible: false,
-                          builder: (BuildContext context) {
-                            return _saveDialogue(fileToSave: _imageFile, format: '.png');
-                      });
-                    },
-                    child: Icon(Icons.save_alt),
-                  ),
-                )
+                _cropButton(),
+                _saveButton(),
+                _convertButton()
               ],
             ),
-            SizedBox(
-              height: 40.0,
-            ),
-            SizedBox(
-              width: 150.0,
-              child: ElevatedButton(
-                onPressed: () async {
-                  SnackBar message;
-                  File converted;
-                  bool conversionFailed = false;
-                  BuildContext dialogContext;
-                  showDialog(context: context, barrierDismissible: false,
-                      builder: (BuildContext context) {
-                        dialogContext = context;
-                        return Dialog(
-                          child: new Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              CircularProgressIndicator(),
-                              Text('Converting')
-                            ],
-                          ),
-                        );
-                      });
-                  try {
-                    converted = await _convertImage();
-                    Navigator.pop(dialogContext);
-                  } on NoImageException catch(e) {
-                    Navigator.pop(dialogContext);
-                    message = SnackBar(content: Text(e.cause));
-                    ScaffoldMessenger.of(context).showSnackBar(message);
-                    conversionFailed = true;
-                  }
-                  if (!conversionFailed) {
-                    showDialog(context: context,
-                        barrierDismissible: false,
-                        builder: (BuildContext context) {
-                          return _saveDialogue(fileToSave: converted, format: '.txt');
-                    });
-                  }
-                },
-                child: Icon(Icons.alternate_email),
-              ),
-            )
           ],
-        )
+        );
+  }
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      resizeToAvoidBottomInset: false,
+      bottomNavigationBar: BottomAppBar(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            IconButton(icon: Icon(Icons.menu),
+                onPressed: () {
+              Navigator.pushNamed(context, "/");
+                }),
+            IconButton(icon: Icon(Icons.camera),
+                onPressed: () {
+                  print(context);
+                }),
+            IconButton(icon: Icon(Icons.storage_rounded),
+              onPressed: () {},)
+          ],
+        ),
+      ),
+      appBar: AppBar(
+        title: Text('Take Pictures'),
+      ),
+      body: OrientationBuilder(
+        builder: (BuildContext orientationContext, orientation) {
+          return orientation == Orientation.portrait ? _portraitOrientation() :
+              _landscapeOrientation();
+        },
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {

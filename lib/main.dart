@@ -19,7 +19,7 @@ void main() {
           textTheme: TextTheme(
             headline1: TextStyle(
               color: Color(0xFFF98125),
-              fontSize: 80.0,
+              fontSize: 50.0,
             ),
               headline2: TextStyle(
                 color: Color(0xFFFFFFFF),
