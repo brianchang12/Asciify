@@ -1,3 +1,8 @@
+import 'dart:io';
+
+import 'package:asciify/controller/file_controller.dart';
+import 'package:asciify/screens/email_page.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -108,7 +113,9 @@ class HomePage extends StatelessWidget{
                   Navigator.pushNamed(context, '/camera');
                 }),
             IconButton(icon: Icon(Icons.storage_rounded),
-              onPressed: () {},)
+              onPressed: () {
+              Navigator.pushNamed(context, '/email');
+              },)
           ],
         ),
       ),
@@ -119,15 +126,6 @@ class HomePage extends StatelessWidget{
       body: _homeWidget(),
       );
   }
-  // @override
-  // void initState(){
-  //   super.initState();
-  //   SystemChrome.setPreferredOrientations([
-  //     DeviceOrientation.portraitUp,
-  //     DeviceOrientation.portraitDown,
-  //   ]);
-  // }
-
 
 }
 

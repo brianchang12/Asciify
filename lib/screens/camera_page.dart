@@ -3,7 +3,9 @@ import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui';
-import 'package:asciify/screens/custom_exception.dart';
+import 'email_page.dart';
+import 'file:///C:/Users/user/AndroidStudioProjects/asciify/lib/exception/custom_exception.dart';
+import 'package:asciify/controller/file_controller.dart';
 import 'package:asciify/screens/home_page.dart';
 import 'package:dio/dio.dart';
 
@@ -177,17 +179,17 @@ class _CameraPageState extends State<CameraPage> {
 
 
   Future<void> _crop(ImageSource source) async {
-    final selected = await picker.getImage(source: source);
-    if (selected != null) {
+    //final selected = await picker.getImage(source: source);
+    if (_imageFile != null) {
       File cropped = await ImageCropper.cropImage(
-        sourcePath: selected.path,
+        sourcePath: _imageFile.path,
         compressQuality: 100,
         aspectRatio: CropAspectRatio(
             ratioX: 1,
             ratioY: 1),
         maxWidth: 1000,
         maxHeight: 1000,
-        compressFormat: ImageCompressFormat.jpg,
+        compressFormat: ImageCompressFormat.png,
           iosUiSettings: IOSUiSettings(
             minimumAspectRatio: 1.0,
           ),
@@ -354,6 +356,7 @@ class _CameraPageState extends State<CameraPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).backgroundColor,
       resizeToAvoidBottomInset: false,
       bottomNavigationBar: BottomAppBar(
         child: Row(
@@ -368,7 +371,9 @@ class _CameraPageState extends State<CameraPage> {
                   print(context);
                 }),
             IconButton(icon: Icon(Icons.storage_rounded),
-              onPressed: () {},)
+              onPressed: () {
+              Navigator.pushNamed(context, "/email");
+              },)
           ],
         ),
       ),
