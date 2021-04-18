@@ -1,14 +1,26 @@
 class SameNameFileException implements Exception {
-  String cause;
-  SameNameFileException(this.cause);
+  String _cause;
+  SameNameFileException(this._cause);
+
+  String getCause() {
+    return _cause;
+  }
 }
 
 class PlatformException implements Exception {
-  String cause;
-  PlatformException(this.cause);
+  String _cause;
+  PlatformException(this._cause);
+
+  String getCause() {
+    return _cause;
+  }
 }
 
 class NoImageException implements Exception {
-  String cause;
-  NoImageException(this.cause);
+  String _cause;
+  NoImageException(this._cause);
+
+  String getCause() {
+    return _cause;
+  }
 }

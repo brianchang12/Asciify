@@ -1,17 +1,13 @@
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/widgets.dart';
-import 'package:flutter/cupertino.dart';
-
-
 
 class FileController {
 
-  static FileController fileController;
+  static FileController? fileController;
 
   FileController();
 
-  static FileController getInstance() {
+  static FileController? getInstance() {
     if (fileController == null) {
       return FileController();
     } else {
@@ -19,15 +15,15 @@ class FileController {
     }
   }
 
-  Future<File> getAsciiFile() async {
+  Future<File?> getAsciiFile() async {
     print('Starting');
-    FilePickerResult _pickedResult = await FilePicker.platform.pickFiles(
+    FilePickerResult? _pickedResult = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['txt', 'jpg', 'png'],
     );
     print('finished picking');
     if (_pickedResult != null) {
-      File file = File(_pickedResult.files.single.path);
+      File file = File(_pickedResult.files.single.path!);
       print('return files');
       return file;
     } else {

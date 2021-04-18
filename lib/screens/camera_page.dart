@@ -1,20 +1,10 @@
-import 'dart:convert';
-import 'dart:ffi';
-import 'dart:io';
-import 'dart:typed_data';
-import 'dart:ui';
-import 'email_page.dart';
-import 'file:///C:/Users/user/AndroidStudioProjects/asciify/lib/exception/custom_exception.dart';
-import 'package:asciify/controller/file_controller.dart';
-import 'package:asciify/screens/home_page.dart';
-import 'package:dio/dio.dart';
 
-import 'package:flushbar/flushbar.dart';
+import 'dart:io';
+import 'dart:ui';
+import 'package:asciify/exception/custom_exception.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
-
 import 'package:image_cropper/image_cropper.dart';
-import 'package:image_gallery_saver/image_gallery_saver.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -26,10 +16,10 @@ class CameraPage extends StatefulWidget {
 }
 
 class _CameraPageState extends State<CameraPage> {
-  File _imageFile;
+  File? _imageFile;
   final picker = ImagePicker();
-  Image image;
-  TextEditingController textController;
+  Image? image;
+  TextEditingController? textController;
 
 
   @override
@@ -41,15 +31,15 @@ class _CameraPageState extends State<CameraPage> {
 
   @override
   void dispose() {
-    textController.dispose();
+    textController!.dispose();
     super.dispose();
   }
 
-  Future<void> _saveImage({String fileName, String format, File fileToSave}) async {
+  Future<void> _saveImage({required String fileName, required String format, required File? fileToSave}) async {
     if (fileToSave != null) {
       if (Platform.isAndroid) {
-        Directory directory = await getExternalStorageDirectory();
-        String directoryPath = directory.path;
+        Directory? directory = await getExternalStorageDirectory();
+        String directoryPath = directory!.path;
         String filePath = '$directoryPath/$fileName$format';
         if (await File(filePath).exists()) {
           throw SameNameFileException('File with Same Name Found, Please Rename');
@@ -75,11 +65,11 @@ class _CameraPageState extends State<CameraPage> {
     });
   }
 
-  StatefulBuilder _saveDialogue({String exceptionText = '', File fileToSave, String format}) {
+  StatefulBuilder _saveDialog({required File? fileToSave, required String format}) {
+    String exceptionText = '';
     return StatefulBuilder(
         builder: (BuildContext context, StateSetter setState) {
           print(context);
-          print("saving...");
           return SingleChildScrollView(
             scrollDirection: Axis.vertical,
             child: AlertDialog(
@@ -102,29 +92,33 @@ class _CameraPageState extends State<CameraPage> {
               ),
               actions: [
                 ElevatedButton(onPressed: () {
-                  textController.clear();
+                  textController!.clear();
                   Navigator.of(context).pop();
                 },
                     child: Icon(Icons.cancel)),
                 ElevatedButton(onPressed: () async {
                   try {
-                    await _saveImage(fileName: textController.text, format: format,
+                    await _saveImage(fileName: textController!.text, format: format,
                     fileToSave: fileToSave);
                     Navigator.of(context).pop();
                     SnackBar saveMessage = SnackBar(content: Text('Image Saved'));
                     ScaffoldMessenger.of(context).showSnackBar(saveMessage);
+                  } on SameNameFileException catch(e) {
+                    setState(() {
+                      exceptionText = e.getCause();
+                    });
+                  } on NoImageException catch(e) {
+                    setState(() {
+                      exceptionText = e.getCause();
+                    });
+                  } on PlatformException catch(e) {
+                    setState(() {
+                      exceptionText = e.getCause();
+                    });
                   } catch(e) {
-                    if (e is SameNameFileException ||
-                        e is NoImageException || e is PlatformException) {
-                      setState(() {
-                        exceptionText = e.cause;
-                      });
-                    } else {
-                      print(e.toString());
-                    }
-
+                    print(e.toString());
                   } finally {
-                    textController.clear();
+                    textController!.clear();
                   }
                 },
                     child: Icon(Icons.check))
@@ -139,8 +133,7 @@ class _CameraPageState extends State<CameraPage> {
     if (_imageFile == null) {
       throw NoImageException('No Image to Convert');
     } else {
-      print(_imageFile.path);
-      img.Image test = img.decodeImage(await _imageFile.readAsBytes());
+      img.Image test = img.decodeImage(await _imageFile!.readAsBytes())!;
       int width = test.width;
       int height = test.height;
       double scaleFactor = 0.075;
@@ -179,10 +172,9 @@ class _CameraPageState extends State<CameraPage> {
 
 
   Future<void> _crop(ImageSource source) async {
-    //final selected = await picker.getImage(source: source);
     if (_imageFile != null) {
-      File cropped = await ImageCropper.cropImage(
-        sourcePath: _imageFile.path,
+      File? cropped = await ImageCropper.cropImage(
+        sourcePath: _imageFile!.path,
         compressQuality: 100,
         aspectRatio: CropAspectRatio(
             ratioX: 1,
@@ -227,7 +219,7 @@ class _CameraPageState extends State<CameraPage> {
           showDialog(context: context,
               barrierDismissible: false,
               builder: (BuildContext context) {
-                return _saveDialogue(fileToSave: _imageFile, format: '.png');
+                return _saveDialog(fileToSave: _imageFile, format: '.png');
               });
         },
         child: Icon(Icons.save_alt),
@@ -237,13 +229,12 @@ class _CameraPageState extends State<CameraPage> {
 
   Widget _imageDisplay() {
     return _imageFile == null ? Card(
-      child: Align(
-        alignment: Alignment.center,
+      child: Center(
         child: Text('No Image Selected'),
       ),
       color:   Color(0xFF939BB1),
     ) : FittedBox(
-      child: Image.file(_imageFile),
+      child: Image.file(_imageFile!),
       fit: BoxFit.fill,
     );
   }
@@ -283,9 +274,9 @@ class _CameraPageState extends State<CameraPage> {
       child: ElevatedButton(
         onPressed: () async {
           SnackBar message;
-          File converted;
+          late File converted;
           bool conversionFailed = false;
-          BuildContext dialogContext;
+          BuildContext? dialogContext;
           showDialog(context: context, barrierDismissible: false,
               builder: (BuildContext context) {
                 context.findAncestorRenderObjectOfType();
@@ -308,11 +299,11 @@ class _CameraPageState extends State<CameraPage> {
               });
           try {
             converted = await _convertImage();
-            Navigator.pop(dialogContext);
+            Navigator.pop(dialogContext!);
           } on NoImageException catch(e) {
             await Future.delayed(Duration(seconds: 1));
-            Navigator.pop(dialogContext);
-            message = SnackBar(content: Text(e.cause));
+            Navigator.pop(dialogContext!);
+            message = SnackBar(content: Text(e.getCause()));
             ScaffoldMessenger.of(context).showSnackBar(message);
             conversionFailed = true;
           }
@@ -320,7 +311,7 @@ class _CameraPageState extends State<CameraPage> {
             showDialog(context: context,
                 barrierDismissible: false,
                 builder: (BuildContext context) {
-                  return _saveDialogue(fileToSave: converted, format: '.txt');
+                  return _saveDialog(fileToSave: converted, format: '.txt');
                 });
           }
         },
