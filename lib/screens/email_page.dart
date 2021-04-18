@@ -38,12 +38,27 @@ class _EmailPageState extends State<EmailPage> {
     return Container(
       margin: EdgeInsets.only(top: topMargin, bottom: bottomMargin),
       child: TextField(
-
         maxLines: lines,
+        style: TextStyle(
+          color: Colors.white
+        ),
         controller: controller,
         obscureText: false,
         decoration: InputDecoration(
-          border: OutlineInputBorder(
+          labelStyle: TextStyle(
+            color: Colors.white,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(
+              color: Color(0xFFF98125),
+              width: 3.0
+            ),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(
+              color: Color(0xFFF98125),
+              width: 3.0
+            ),
           ),
           labelText: label
         ),
@@ -107,25 +122,22 @@ class _EmailPageState extends State<EmailPage> {
           attachmentPaths: filePaths.toList(),
           isHTML: false
         );
-        String platformResponse;
         try {
           await FlutterEmailSender.send(email);
-          platformResponse = 'success';
-          print(platformResponse);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text("Email Sent"))
           );
+          _bodyController.clear();
+          _subjectController.clear();
+          _recipientController.clear();
+          setState(() {
+            _files.clear();
+          });
         } catch (error) {
-          platformResponse = error.toString();
-          print(platformResponse);
           ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text("Email Not Sent"))
+              SnackBar(content: Text("Email was Unable to be Sent"))
           );
         }
-        // await FlutterEmailSender.send(email);
-        // ScaffoldMessenger.of(context).showSnackBar(
-        //   SnackBar(content: Text("Email Sent"))
-        // );
       },
           child: Icon(Icons.email,
           ),
