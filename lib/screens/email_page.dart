@@ -1,7 +1,8 @@
 
 import 'dart:io';
-import 'package:asciify/icon/custom_icons.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_email_sender/flutter_email_sender.dart';
 
 class EmailPage extends StatefulWidget {
 
@@ -10,15 +11,14 @@ class EmailPage extends StatefulWidget {
 }
 
 class _EmailPageState extends State<EmailPage> {
-  List<File>? _files;
-  TextEditingController? _recipientController;
-  TextEditingController? _subjectController;
-  TextEditingController? _bodyController;
+  List<File> _files = [];
+  late TextEditingController _recipientController;
+  late TextEditingController _subjectController;
+  late TextEditingController _bodyController;
 
   @override
   void initState() {
     super.initState();
-    _files = [];
     _recipientController = TextEditingController();
     _subjectController = TextEditingController();
     _bodyController = TextEditingController();
@@ -27,10 +27,9 @@ class _EmailPageState extends State<EmailPage> {
 
   @override
   void dispose() {
-    _files = null;
-    _recipientController!.dispose();
-    _subjectController!.dispose();
-    _bodyController!.dispose();
+    _recipientController.dispose();
+    _subjectController.dispose();
+    _bodyController.dispose();
     super.dispose();
   }
 
@@ -53,13 +52,17 @@ class _EmailPageState extends State<EmailPage> {
   }
 
   Widget _fileDisplay() {
-    if (_files!.isEmpty == true) {
+    if (_files.isEmpty == true) {
       return Container(
         color: Color(0xFF11224D),
         width: MediaQuery.of(context).size.width * 0.90,
         height: MediaQuery.of(context).size.height * 0.25,
         child: Center(
-          child: Text("No Files Selected"),
+          child: Text("No Files Selected",
+              style: TextStyle(
+                color: Colors.white
+              ),
+          ),
         ),
       );
     } else {
@@ -68,15 +71,22 @@ class _EmailPageState extends State<EmailPage> {
         width: MediaQuery.of(context).size.width * 0.90,
         height: MediaQuery.of(context).size.height * 0.25,
         child: ListView.builder(
-            itemCount: _files!.length,
+            itemCount: _files.length,
             itemBuilder: (context, index) {
-              List<String> pathComponents = _files![index].path.split(r"/");
+              List<String> pathComponents = _files[index].path.split(r"/");
               String fileName = pathComponents.last;
               return Card(
                 child: ListTile(
                   title: Text(fileName),
-                  subtitle: Text(_files![index].path),
-                  trailing: Icon(Icons.indeterminate_check_box_outlined),
+                  subtitle: Text(_files[index].path),
+                  trailing: IconButton(
+                    icon: Icon(Icons.indeterminate_check_box_outlined),
+                    onPressed: () {
+                      setState(() {
+                        _files.removeAt(index);
+                      });
+                    },
+                  ),
                 ),
               );
             }),
@@ -88,16 +98,61 @@ class _EmailPageState extends State<EmailPage> {
     return Container(
       margin: EdgeInsets.only(top: 7.5),
       width: MediaQuery.of(context).size.width * 0.90,
-      child: ElevatedButton(onPressed: () {},
+      child: ElevatedButton(onPressed: () async {
+        Iterable<String> filePaths = _files.map((e) => e.path);
+        Email email = Email(
+          body: _bodyController.text,
+          subject: _subjectController.text,
+          recipients: [_recipientController.text],
+          attachmentPaths: filePaths.toList(),
+          isHTML: false
+        );
+        String platformResponse;
+        try {
+          await FlutterEmailSender.send(email);
+          platformResponse = 'success';
+          print(platformResponse);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Email Sent"))
+          );
+        } catch (error) {
+          platformResponse = error.toString();
+          print(platformResponse);
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Email Not Sent"))
+          );
+        }
+        // await FlutterEmailSender.send(email);
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //   SnackBar(content: Text("Email Sent"))
+        // );
+      },
           child: Icon(Icons.email,
           ),
       ),
     );
   }
 
+  Future<File?> getAsciiFile() async {
+    print('Starting');
+    FilePickerResult? _pickedResult = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['txt', 'jpg', 'png'],
+    );
+    print('finished picking');
+    if (_pickedResult != null) {
+      File file = File(_pickedResult.files.single.path!);
+      print('return files');
+      return file;
+    } else {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).backgroundColor,
       bottomNavigationBar: BottomAppBar(
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -134,20 +189,20 @@ class _EmailPageState extends State<EmailPage> {
                       .size
                       .width * 0.90,
                   child: emailFields(
-                      'Recipient', 15.0, 7.5, 1, _recipientController!)),
+                      'Recipient', 15.0, 7.5, 1, _recipientController)),
               Container(
                   width: MediaQuery
                       .of(context)
                       .size
                       .width * 0.90,
                   child: emailFields(
-                      'Subject', 7.5, 7.5, 1, _subjectController!)),
+                      'Subject', 7.5, 7.5, 1, _subjectController)),
               Container(
                   width: MediaQuery
                       .of(context)
                       .size
                       .width * 0.90,
-                  child: emailFields('Body', 7.5, 7.5, 6, _bodyController!)
+                  child: emailFields('Body', 7.5, 7.5, 6, _bodyController)
               ),
               Column(
                 mainAxisSize: MainAxisSize.min,
@@ -161,9 +216,20 @@ class _EmailPageState extends State<EmailPage> {
                             color: Color(0xFFF98125),
                           ),
                         ),
-                        Icon(Icons.add,
-                        size: 35,
-                          color:  Color(0xFFF98125),
+                        IconButton(
+                          onPressed: () async {
+                            File? fileToAdd = await getAsciiFile();
+                            if (fileToAdd != null) {
+                              print("success");
+                              setState(() {
+                                _files.add(fileToAdd);
+                              });
+                            }
+                          },
+                          icon: Icon(Icons.add,
+                          size: 35,
+                            color:  Color(0xFFF98125),
+                          ),
                         ),
                       ]
                   ),
