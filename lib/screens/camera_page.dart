@@ -155,18 +155,34 @@ class _CameraPageState extends State<CameraPage> {
 
 
 
-  Future<void> _crop() async {
+  Future<void> _crop(Orientation orientation) async {
     if (_imageFile == null) {
       throw NoImageException("No Image to Crop");
     } else {
+      late double y;
+      late double x;
+      if (orientation == Orientation.portrait) {
+        y = 1;
+        x = MediaQuery.of(context).size.aspectRatio;
+      } else {
+        y = MediaQuery.of(context).size.aspectRatio;
+        x = 1;
+      }
       File? cropped = await ImageCropper.cropImage(
         sourcePath: _imageFile!.path,
-        compressQuality: 100,
-        aspectRatio: CropAspectRatio(
-            ratioX: 1,
-            ratioY: 1),
-        maxWidth: 1000,
-        maxHeight: 1000,
+        // compressQuality: 100,
+        // aspectRatio: CropAspectRatio(
+        //     ratioX: x,
+        //     ratioY: y),
+        // maxWidth: 2000,
+        // maxHeight: 1000,
+          aspectRatioPresets: [
+            CropAspectRatioPreset.square,
+            CropAspectRatioPreset.ratio3x2,
+            CropAspectRatioPreset.original,
+            CropAspectRatioPreset.ratio4x3,
+            CropAspectRatioPreset.ratio16x9
+          ],
         compressFormat: ImageCompressFormat.png,
           iosUiSettings: IOSUiSettings(
             minimumAspectRatio: 1.0,
@@ -175,7 +191,9 @@ class _CameraPageState extends State<CameraPage> {
           toolbarColor: Colors.deepOrange,
           toolbarTitle: "Crop",
           statusBarColor: Colors.deepOrange.shade900,
-          backgroundColor: Colors.white
+          backgroundColor: Colors.white,
+            initAspectRatio: CropAspectRatioPreset.original,
+            lockAspectRatio: false,
         )
       );
       setState(() {
@@ -184,14 +202,14 @@ class _CameraPageState extends State<CameraPage> {
     }
   }
 
-  Widget _cropButton() {
+  Widget _cropButton(Orientation orientation) {
     return SizedBox(
-      width: 110.0,
+      width: MediaQuery.of(context).size.width * 0.27,
       child: ElevatedButton(
         key: Key('cropButton'),
           onPressed: () async {
             try {
-              await _crop();
+              await _crop(orientation);
             } on NoImageException catch(e) {
               Flushbar(
                 flushbarPosition: FlushbarPosition.TOP,
@@ -209,7 +227,7 @@ class _CameraPageState extends State<CameraPage> {
 
   Widget _saveButton() {
     return SizedBox(
-      width: 110.0,
+      width: MediaQuery.of(context).size.width * 0.27,
       child: ElevatedButton(
         key: Key('saveButton'),
         onPressed: () {
@@ -254,34 +272,39 @@ class _CameraPageState extends State<CameraPage> {
   Widget _landscapeOrientation(Orientation orientation) {
     Orientation orientation = Orientation.landscape;
     return Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         mainAxisSize: MainAxisSize.max,
         children: [
-          Container(
-              margin: EdgeInsets.fromLTRB(0, 15.0, 0, 15.0),
-              width: MediaQuery.of(context).size.width * 0.60,
-              height: MediaQuery.of(context).size.height * 0.60,
-              child: _imageDisplay()
+          Expanded(
+            flex: 7,
+            child: Container(
+              margin: EdgeInsets.only(left: 7.0),
+                width: MediaQuery.of(context).size.width * 0.60,
+                height: MediaQuery.of(context).size.height * 0.60,
+                child: _imageDisplay()
+            ),
           ),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            mainAxisSize: MainAxisSize.max,
-            children: [
-              _cropButton(),
-              _saveButton(),
-              _convertButton(orientation),
-            ],
+          Expanded(
+            flex: 3,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              mainAxisSize: MainAxisSize.max,
+              children: [
+                _cropButton(orientation),
+                _saveButton(),
+                _convertButton(orientation),
+                _cameraButton(),
+              ],
+            ),
           ),
-          SizedBox(
-            width: 35.0,
-          )
         ],
       );
   }
 
   Widget _convertButton(Orientation orientation) {
     return SizedBox(
-      width: 110.0,
+      width: MediaQuery.of(context).size.width * 0.27,
       child: ElevatedButton(
         key: Key('convertButton'),
         onPressed: () async {
@@ -333,29 +356,61 @@ class _CameraPageState extends State<CameraPage> {
     );
   }
 
+  Widget _cameraButton() {
+    return SizedBox(
+      width: MediaQuery.of(context).size.width * 0.27,
+      child: ElevatedButton(
+        onPressed: () {
+          _pickImage(ImageSource.camera);
+        },
+        child: Icon(Icons.add_a_photo),
+      ),
+    );
+  }
+
   Widget _portraitOrientation(Orientation orientation) {
     print(context);
     return Column(
-          mainAxisAlignment: MainAxisAlignment.start,
-          mainAxisSize: MainAxisSize.max,
-          children: [
-            Container(
-                margin: EdgeInsets.fromLTRB(0, 15.0, 0, 25.0),
-                width: MediaQuery.of(context).size.width * 0.60,
-                height: MediaQuery.of(context).size.height * 0.60,
-                child: _imageDisplay()
-            ),
-            Row(
+      mainAxisAlignment: MainAxisAlignment.start,
+      mainAxisSize: MainAxisSize.max,
+      children: [
+        Expanded(
+          flex: 6,
+          child: Container(
+              margin: EdgeInsets.fromLTRB(0, 15.0, 0, 15.0),
+              width: MediaQuery.of(context).size.width * 0.60,
+              height: MediaQuery.of(context).size.height * 0.60,
+              child: _imageDisplay()),
+        ),
+        Expanded(
+          flex: 1,
+          child: Container(
+            //margin: EdgeInsets.only(bottom: 15.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _cropButton(),
+                _cropButton(orientation),
                 _saveButton(),
                 _convertButton(orientation),
               ],
             ),
-          ],
-        );
+          )
+        ),
+        Expanded(
+          flex: 1,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _cameraButton(),
+            ],
+          ),
+        ),
+      ],
+    );
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -388,12 +443,6 @@ class _CameraPageState extends State<CameraPage> {
           return orientation == Orientation.portrait ? _portraitOrientation(orientation) :
               _landscapeOrientation(orientation);
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _pickImage(ImageSource.camera);
-        },
-        child: Icon(Icons.add_a_photo),
       ),
     );
   }

@@ -9,10 +9,8 @@ void main() {
   testWidgets('Test Camera Page Widgets', (WidgetTester tester) async {
     await tester.pumpWidget(MaterialApp(home: CameraPage(),));
     var buttonFinder = find.byType(ElevatedButton);
-    var floatingButtonFinder = find.byType(FloatingActionButton);
     var emptyImageFinder = find.byKey(Key('emptyImageDisplay'));
     expect(buttonFinder, findsNWidgets(3));
-    expect(floatingButtonFinder, findsOneWidget);
     expect(emptyImageFinder, findsOneWidget);
   });
 
