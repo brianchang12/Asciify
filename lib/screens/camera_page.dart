@@ -1,6 +1,8 @@
 
 import 'dart:io';
 import 'dart:ui';
+import 'package:another_flushbar/flushbar.dart';
+import 'package:asciify/class/asciiConverter.dart';
 import 'package:asciify/exception/custom_exception.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
@@ -19,7 +21,7 @@ class _CameraPageState extends State<CameraPage> {
   File? _imageFile;
   final picker = ImagePicker();
   Image? image;
-  TextEditingController? textController;
+  late TextEditingController textController;
 
 
   @override
@@ -31,30 +33,31 @@ class _CameraPageState extends State<CameraPage> {
 
   @override
   void dispose() {
-    textController!.dispose();
+    textController.dispose();
     super.dispose();
   }
 
-  Future<void> _saveImage({required String fileName, required String format, required File? fileToSave}) async {
-    if (fileToSave != null) {
-      if (Platform.isAndroid) {
-        Directory? directory = await getExternalStorageDirectory();
-        String directoryPath = directory!.path;
-        String filePath = '$directoryPath/$fileName$format';
-        if (await File(filePath).exists()) {
-          throw SameNameFileException('File with Same Name Found, Please Rename');
-        }
-        File saveFile = File(filePath);
-        await saveFile.writeAsBytes(await fileToSave.readAsBytes());
-      } else {
-        throw PlatformException('Platform is not Supported');
-      }
-    }  else {
-      throw NoImageException('No Image is Selected');
+  Future<void> _saveImage({required String fileName,
+    required String format,
+    File? fileToSave, StringBuffer? buffer}) async {
+    Directory? directory;
+    if (Platform.isAndroid) {
+       directory = await getExternalStorageDirectory();
+    } else if (Platform.isIOS) {
+      directory = await getApplicationDocumentsDirectory();
     }
-
+    String directoryPath = directory!.path;
+    String filePath = '$directoryPath/$fileName$format';
+    if (await File(filePath).exists()) {
+      throw SameNameFileException('File with Same Name Found, Please Rename');
+    }
+    File saveFile = File(filePath);
+    if (fileToSave != null && buffer == null) {
+      await saveFile.writeAsBytes(await fileToSave.readAsBytes());
+    } else if (fileToSave == null && buffer != null) {
+      await saveFile.writeAsString(buffer.toString());
+    }
   }
-
 
   Future<void> _pickImage(ImageSource source) async {
     final selected = await picker.getImage(source: source);
@@ -65,7 +68,7 @@ class _CameraPageState extends State<CameraPage> {
     });
   }
 
-  StatefulBuilder _saveDialog({required File? fileToSave, required String format}) {
+  StatefulBuilder _saveDialog({File? fileToSave, StringBuffer? buffer, required String format}) {
     String exceptionText = '';
     return StatefulBuilder(
         builder: (BuildContext context, StateSetter setState) {
@@ -92,33 +95,30 @@ class _CameraPageState extends State<CameraPage> {
               ),
               actions: [
                 ElevatedButton(onPressed: () {
-                  textController!.clear();
+                  textController.clear();
                   Navigator.of(context).pop();
                 },
                     child: Icon(Icons.cancel)),
                 ElevatedButton(onPressed: () async {
                   try {
-                    await _saveImage(fileName: textController!.text, format: format,
-                    fileToSave: fileToSave);
+                    await _saveImage(fileName: textController.text, format: format,
+                    fileToSave: fileToSave, buffer: buffer);
                     Navigator.of(context).pop();
-                    SnackBar saveMessage = SnackBar(content: Text('Image Saved'));
-                    ScaffoldMessenger.of(context).showSnackBar(saveMessage);
+                    Flushbar(
+                      flushbarPosition: FlushbarPosition.TOP,
+                      duration: Duration(seconds: 2),
+                      message: 'Image Saved',
+                      isDismissible: true,
+                      flushbarStyle: FlushbarStyle.FLOATING,
+                    )..show(context);
                   } on SameNameFileException catch(e) {
-                    setState(() {
-                      exceptionText = e.getCause();
-                    });
-                  } on NoImageException catch(e) {
-                    setState(() {
-                      exceptionText = e.getCause();
-                    });
-                  } on PlatformException catch(e) {
                     setState(() {
                       exceptionText = e.getCause();
                     });
                   } catch(e) {
                     print(e.toString());
                   } finally {
-                    textController!.clear();
+                    textController.clear();
                   }
                 },
                     child: Icon(Icons.check))
@@ -129,50 +129,36 @@ class _CameraPageState extends State<CameraPage> {
     );
   }
 
-  Future<File> _convertImage() async {
+  Future<StringBuffer> _convertImage(Orientation orientation) async {
     if (_imageFile == null) {
       throw NoImageException('No Image to Convert');
     } else {
-      img.Image test = img.decodeImage(await _imageFile!.readAsBytes())!;
-      int width = test.width;
-      int height = test.height;
-      double scaleFactor = 0.075;
-      test = img.copyResize(
-          test, height: (scaleFactor * height).toInt(),
-          width: (scaleFactor * width * 1.12).toInt(),
-          interpolation: img.Interpolation.nearest);
-      print(test.width);
-      print(test.height);
-      test = img.adjustColor(test, contrast: 20.0);
-      String chars = " .:-=+*#%@";
-      List<String> charList = chars.split("");
-      charList = charList.reversed.toList();
-      int charLength = charList.length;
-      double interval = charLength / 256;
-      Directory directory = await getApplicationDocumentsDirectory();
-      String path = directory.path;
-      File output = File('$path/output.txt');
-      output.writeAsStringSync('');
-      for (int y = 0; y < test.height; y++) {
-        for (int x = 0; x < test.width; x++) {
-          int testPixel = test.getPixel(x, y);
-          int blue = ((testPixel & 0x00FF0000) >> 16);
-          int green = ((testPixel & 0x0000FF00) >> 8);
-          int red = testPixel & 0x000000FF;
-          int grayValue = ((red / 3) + (green / 3) + (blue / 3)).round();
-          await output.writeAsString(
-              charList[(grayValue * interval).floor()], mode: FileMode.append);
-        }
-        await output.writeAsString('\n', mode: FileMode.append);
+      late double widthFactor;
+      if (orientation == Orientation.portrait) {
+        widthFactor = 1.12;
+      } else {
+        widthFactor = 3.12;
       }
-      return output;
+      img.Image imageExtract = img.decodeImage(await _imageFile!.readAsBytes())!;
+      int width = imageExtract.width;
+      int height = imageExtract.height;
+      double scaleFactor = 0.075;
+      imageExtract = img.copyResize(imageExtract, height: (scaleFactor * height).toInt(),
+          width: (scaleFactor * width * widthFactor).toInt(),
+          interpolation: img.Interpolation.nearest);
+      imageExtract = img.adjustColor(imageExtract, contrast: 20.0);
+      var asciiConverter = AsciiConverter.getInstance();
+      var buffer = asciiConverter!.asciiConvert(imageExtract);
+      return buffer;
     }
   }
 
 
 
-  Future<void> _crop(ImageSource source) async {
-    if (_imageFile != null) {
+  Future<void> _crop() async {
+    if (_imageFile == null) {
+      throw NoImageException("No Image to Crop");
+    } else {
       File? cropped = await ImageCropper.cropImage(
         sourcePath: _imageFile!.path,
         compressQuality: 100,
@@ -202,8 +188,19 @@ class _CameraPageState extends State<CameraPage> {
     return SizedBox(
       width: 110.0,
       child: ElevatedButton(
-          onPressed: () {
-            _crop(ImageSource.gallery);
+        key: Key('cropButton'),
+          onPressed: () async {
+            try {
+              await _crop();
+            } on NoImageException catch(e) {
+              Flushbar(
+                flushbarPosition: FlushbarPosition.TOP,
+                duration: Duration(seconds: 2),
+                message: e.getCause(),
+                isDismissible: true,
+                flushbarStyle: FlushbarStyle.FLOATING,
+              )..show(context);
+            }
           },
           child: Icon(Icons.crop)
       ),
@@ -214,13 +211,23 @@ class _CameraPageState extends State<CameraPage> {
     return SizedBox(
       width: 110.0,
       child: ElevatedButton(
+        key: Key('saveButton'),
         onPressed: () {
-          print(context);
-          showDialog(context: context,
-              barrierDismissible: false,
-              builder: (BuildContext context) {
-                return _saveDialog(fileToSave: _imageFile, format: '.png');
-              });
+          if (_imageFile == null) {
+            Flushbar(
+              flushbarPosition: FlushbarPosition.TOP,
+              duration: Duration(seconds: 2),
+              message: 'No Image to Save',
+              isDismissible: true,
+              flushbarStyle: FlushbarStyle.FLOATING,
+            )..show(context);
+          } else {
+            showDialog(context: context,
+                barrierDismissible: false,
+                builder: (BuildContext context) {
+                  return _saveDialog(fileToSave: _imageFile, format: '.png');
+                });
+          }
         },
         child: Icon(Icons.save_alt),
       ),
@@ -228,20 +235,24 @@ class _CameraPageState extends State<CameraPage> {
   }
 
   Widget _imageDisplay() {
-    return _imageFile == null ? Card(
-      child: Center(
-        child: Text('No Image Selected'),
-      ),
-      color:   Color(0xFF939BB1),
-    ) : FittedBox(
-      child: Image.file(_imageFile!),
-      fit: BoxFit.fill,
-    );
+    return _imageFile == null
+        ? Card(
+            key: Key('emptyImageDisplay'),
+            child: Center(
+              child: Text('No Image Selected'),
+            ),
+            color: Color(0xFF939BB1),
+          )
+        : FittedBox(
+            key: Key('imageDisplay'),
+            child: Image.file(_imageFile!),
+            fit: BoxFit.fill,
+          );
   }
 
-
   // _imageFile == null ? Text('No Image Selected') : Image.file(_imageFile),
-  Widget _landscapeOrientation() {
+  Widget _landscapeOrientation(Orientation orientation) {
+    Orientation orientation = Orientation.landscape;
     return Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         mainAxisSize: MainAxisSize.max,
@@ -258,7 +269,7 @@ class _CameraPageState extends State<CameraPage> {
             children: [
               _cropButton(),
               _saveButton(),
-              _convertButton(),
+              _convertButton(orientation),
             ],
           ),
           SizedBox(
@@ -268,19 +279,17 @@ class _CameraPageState extends State<CameraPage> {
       );
   }
 
-  Widget _convertButton() {
+  Widget _convertButton(Orientation orientation) {
     return SizedBox(
       width: 110.0,
       child: ElevatedButton(
+        key: Key('convertButton'),
         onPressed: () async {
-          SnackBar message;
-          late File converted;
+          late StringBuffer converted;
           bool conversionFailed = false;
-          BuildContext? dialogContext;
           showDialog(context: context, barrierDismissible: false,
               builder: (BuildContext context) {
                 context.findAncestorRenderObjectOfType();
-                dialogContext = context;
                 return Dialog(
                   child: new Column(
                     mainAxisSize: MainAxisSize.min,
@@ -298,20 +307,24 @@ class _CameraPageState extends State<CameraPage> {
                 );
               });
           try {
-            converted = await _convertImage();
-            Navigator.pop(dialogContext!);
+            converted = await _convertImage(orientation);
+            Navigator.pop(context);
           } on NoImageException catch(e) {
-            await Future.delayed(Duration(seconds: 1));
-            Navigator.pop(dialogContext!);
-            message = SnackBar(content: Text(e.getCause()));
-            ScaffoldMessenger.of(context).showSnackBar(message);
+            Navigator.pop(context);
+            Flushbar(
+              flushbarPosition: FlushbarPosition.TOP,
+              duration: Duration(seconds: 2),
+              message: e.getCause(),
+              isDismissible: true,
+              flushbarStyle: FlushbarStyle.FLOATING,
+            )..show(context);
             conversionFailed = true;
           }
           if (!conversionFailed) {
             showDialog(context: context,
                 barrierDismissible: false,
                 builder: (BuildContext context) {
-                  return _saveDialog(fileToSave: converted, format: '.txt');
+                  return _saveDialog(buffer: converted, format: '.txt');
                 });
           }
         },
@@ -320,9 +333,8 @@ class _CameraPageState extends State<CameraPage> {
     );
   }
 
-  Widget _portraitOrientation() {
+  Widget _portraitOrientation(Orientation orientation) {
     print(context);
-    print('portait');
     return Column(
           mainAxisAlignment: MainAxisAlignment.start,
           mainAxisSize: MainAxisSize.max,
@@ -338,7 +350,7 @@ class _CameraPageState extends State<CameraPage> {
               children: [
                 _cropButton(),
                 _saveButton(),
-                _convertButton()
+                _convertButton(orientation),
               ],
             ),
           ],
@@ -373,8 +385,8 @@ class _CameraPageState extends State<CameraPage> {
       ),
       body: OrientationBuilder(
         builder: (BuildContext orientationContext, orientation) {
-          return orientation == Orientation.portrait ? _portraitOrientation() :
-              _landscapeOrientation();
+          return orientation == Orientation.portrait ? _portraitOrientation(orientation) :
+              _landscapeOrientation(orientation);
         },
       ),
       floatingActionButton: FloatingActionButton(

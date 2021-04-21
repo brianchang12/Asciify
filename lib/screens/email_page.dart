@@ -229,6 +229,7 @@ class _EmailPageState extends State<EmailPage> {
                           ),
                         ),
                         IconButton(
+                          key: Key('addFile'),
                           onPressed: () async {
                             File? fileToAdd = await getAsciiFile();
                             if (fileToAdd != null) {
