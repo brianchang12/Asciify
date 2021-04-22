@@ -1,9 +1,10 @@
-
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 import 'package:another_flushbar/flushbar.dart';
-import 'package:asciify/class/asciiConverter.dart';
+import 'package:asciify/class/ascii_converter.dart';
 import 'package:asciify/exception/custom_exception.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_cropper/image_cropper.dart';
@@ -159,23 +160,8 @@ class _CameraPageState extends State<CameraPage> {
     if (_imageFile == null) {
       throw NoImageException("No Image to Crop");
     } else {
-      late double y;
-      late double x;
-      if (orientation == Orientation.portrait) {
-        y = 1;
-        x = MediaQuery.of(context).size.aspectRatio;
-      } else {
-        y = MediaQuery.of(context).size.aspectRatio;
-        x = 1;
-      }
       File? cropped = await ImageCropper.cropImage(
         sourcePath: _imageFile!.path,
-        // compressQuality: 100,
-        // aspectRatio: CropAspectRatio(
-        //     ratioX: x,
-        //     ratioY: y),
-        // maxWidth: 2000,
-        // maxHeight: 1000,
           aspectRatioPresets: [
             CropAspectRatioPreset.square,
             CropAspectRatioPreset.ratio3x2,
@@ -277,7 +263,7 @@ class _CameraPageState extends State<CameraPage> {
         mainAxisSize: MainAxisSize.max,
         children: [
           Expanded(
-            flex: 7,
+            flex: 8,
             child: Container(
               margin: EdgeInsets.only(left: 7.0),
                 width: MediaQuery.of(context).size.width * 0.60,
@@ -286,16 +272,33 @@ class _CameraPageState extends State<CameraPage> {
             ),
           ),
           Expanded(
-            flex: 3,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                _cropButton(orientation),
-                _saveButton(),
-                _convertButton(orientation),
-                _cameraButton(),
-              ],
+            flex: 2,
+            child: Container(
+              margin: EdgeInsets.only(right: 3, left: 3),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  _cropButton(orientation),
+                  _saveButton(),
+                  _convertButton(orientation),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Container(
+              margin: EdgeInsets.only(right: 3, left: 3),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                mainAxisSize: MainAxisSize.max,
+                children: [
+                  _cameraButton(),
+                  _pickButton(),
+                  _deleteButton(),
+                ],
+              ),
             ),
           ),
         ],
@@ -360,10 +363,67 @@ class _CameraPageState extends State<CameraPage> {
     return SizedBox(
       width: MediaQuery.of(context).size.width * 0.27,
       child: ElevatedButton(
+        key: Key('cameraButton'),
         onPressed: () {
           _pickImage(ImageSource.camera);
         },
         child: Icon(Icons.add_a_photo),
+      ),
+    );
+  }
+
+  Widget _deleteButton() {
+    return SizedBox(
+      width: MediaQuery.of(context).size.width * 0.27,
+      child: ElevatedButton(
+        key: Key('deleteButton'),
+        onPressed: () async {
+          FilePickerResult? pickedResult = await FilePicker.platform.pickFiles(
+            type: FileType.custom,
+            allowMultiple: true,
+            allowedExtensions: ['txt', 'jpg', 'png'],
+          );
+          if (pickedResult != null) {
+            late Directory storage;
+            if (Platform.isAndroid) {
+              storage = (await getExternalStorageDirectory())!;
+            } else {
+              storage = await getApplicationDocumentsDirectory();
+            }
+            String path = storage.path;
+            List<File> files = pickedResult.paths.map((path) => File(path!)).toList();
+            for (File fileToDelete in files) {
+              List<String> components =  fileToDelete.path.split('/');
+              String name = components.last;
+              try {
+                await File(path + '/' + name).delete();
+              } catch(e) {
+                Flushbar(
+                  flushbarPosition: FlushbarPosition.TOP,
+                  duration: Duration(seconds: 2),
+                  message: "Couldn't delete " + name,
+                  isDismissible: true,
+                  flushbarStyle: FlushbarStyle.FLOATING,
+                )..show(context);
+              }
+            }
+            imageCache!.clear();
+          }
+        },
+        child: Icon(Icons.indeterminate_check_box_outlined),
+      ),
+    );
+  }
+
+  Widget _pickButton() {
+    return SizedBox(
+      width: MediaQuery.of(context).size.width * 0.27,
+      child: ElevatedButton(
+        key: Key('pickButton'),
+        onPressed: () {
+          _pickImage(ImageSource.gallery);
+        },
+        child: Icon(Icons.add),
       ),
     );
   }
@@ -401,9 +461,11 @@ class _CameraPageState extends State<CameraPage> {
           flex: 1,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
+              _pickButton(),
               _cameraButton(),
+              _deleteButton()
             ],
           ),
         ),

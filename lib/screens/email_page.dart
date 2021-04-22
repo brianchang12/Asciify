@@ -145,17 +145,15 @@ class _EmailPageState extends State<EmailPage> {
     );
   }
 
-  Future<File?> getAsciiFile() async {
-    print('Starting');
-    FilePickerResult? _pickedResult = await FilePicker.platform.pickFiles(
+  Future<List<File>?> getAsciiFile() async {
+    FilePickerResult? pickedResult = await FilePicker.platform.pickFiles(
       type: FileType.custom,
+      allowMultiple: true,
       allowedExtensions: ['txt', 'jpg', 'png'],
     );
-    print('finished picking');
-    if (_pickedResult != null) {
-      File file = File(_pickedResult.files.single.path!);
-      print('return files');
-      return file;
+    if (pickedResult != null) {
+      List<File> files = pickedResult.paths.map((path) => File(path!)).toList();
+      return files;
     } else {
       return null;
     }
@@ -231,11 +229,13 @@ class _EmailPageState extends State<EmailPage> {
                         IconButton(
                           key: Key('addFile'),
                           onPressed: () async {
-                            File? fileToAdd = await getAsciiFile();
-                            if (fileToAdd != null) {
+                            List<File>? filesToAdd = await getAsciiFile();
+                            if (filesToAdd != null) {
                               print("success");
                               setState(() {
-                                _files.add(fileToAdd);
+                                for (File fileToAdd in filesToAdd) {
+                                  _files.add(fileToAdd);
+                                }
                               });
                             }
                           },
