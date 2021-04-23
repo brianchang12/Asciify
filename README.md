@@ -1,6 +1,6 @@
 # asciify
 
-Android app that takes pictures and converts them to ascii text files.
+Android app that takes the pixels of a picture and maps them with an ascii character, creating a photo contructed by ascii characters.
 
 ## How to Use
 
