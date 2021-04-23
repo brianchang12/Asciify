@@ -23,10 +23,10 @@ Original File:
 
 ## Convenience Features
 
-Application also include feature to send emails with your photos to yourself or friends.
+Application also includes the feature to send emails with your photos to yourself or friends.
 
 
-<img src="https://user-images.githubusercontent.com/59339384/115828091-12d71300-a3c2-11eb-95e6-22635cd48ca6.jpg" width="100" height="100">
+<img src="https://user-images.githubusercontent.com/59339384/115828091-12d71300-a3c2-11eb-95e6-22635cd48ca6.jpg" width="150" height="280">
 
 
 
