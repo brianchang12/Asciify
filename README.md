@@ -17,8 +17,21 @@ Simply take pictures using your device's camera, hit the ascii convert button an
 
 
 
-
+Original File:
 [hat_cup.txt](https://github.com/personalbrian/Asciify/files/6363186/hat_cup.txt)
+
+
+## Convenience Features
+
+Application also include feature to send emails with your photos to yourself or friends.
+
+
+![email](https://user-images.githubusercontent.com/59339384/115828091-12d71300-a3c2-11eb-95e6-22635cd48ca6.jpg)
+
+
+
+
+
 
 
 A few resources to get you started if this is your first Flutter project:
