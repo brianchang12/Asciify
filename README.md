@@ -26,7 +26,7 @@ Original File:
 Application also includes the feature to send emails with your photos to yourself or friends.
 
 
-<img src="https://user-images.githubusercontent.com/59339384/115828091-12d71300-a3c2-11eb-95e6-22635cd48ca6.jpg" width="150" height="280">
+<img src="https://user-images.githubusercontent.com/59339384/115828091-12d71300-a3c2-11eb-95e6-22635cd48ca6.jpg" width="250" height="475">
 
 
 
